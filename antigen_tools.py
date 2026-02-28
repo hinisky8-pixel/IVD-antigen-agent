@@ -3,27 +3,20 @@ from transformers import AutoTokenizer, AutoModelForMaskedLM
 from smolagents import tool
 from typing import Any
 
-def load_esm_from_drive(drive_path: str):
-    """从 Google Drive 本地路径加载模型"""
-    print(f"📦 正在从云盘加载模型: {drive_path}")
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    tokenizer = AutoTokenizer.from_pretrained(drive_path, local_files_only=True)
-    model = AutoModelForMaskedLM.from_pretrained(drive_path, local_files_only=True).to(device)
-    model.eval()
-    return tokenizer, model, device
-
+# 注意：这里不再要求传入 tokenizer 和 model_esm，
+# 我们假定它们已经存在于执行环境的全局变量中。
 @tool
-def predict_stability_score(sequence: str, mutation: str, tokenizer: Any, model_esm: Any, device: Any) -> float:
+def predict_stability_score(sequence: str, mutation: str) -> float:
     """
-    计算单点突变稳定性得分。
+    计算单点突变稳定性得分。使用的是全局预加载的 ESM 模型。
     Args:
         sequence: 蛋白质序列
         mutation: 突变点 (如 'A15V')
-        tokenizer: 模型分词器
-        model_esm: ESM 模型实例
-        device: 计算设备 (cuda 或 cpu)
     """
     try:
+        # 直接从全局环境获取对象
+        global tokenizer, model_esm, device
+        
         wt_aa, mt_aa = mutation[0], mutation[-1]
         pos = int(mutation[1:-1]) - 1 
         inputs = tokenizer(sequence, return_tensors="pt").to(device)
@@ -32,6 +25,7 @@ def predict_stability_score(sequence: str, mutation: str, tokenizer: Any, model_
         score = float(logits[tokenizer.convert_tokens_to_ids(mt_aa)] - logits[tokenizer.convert_tokens_to_ids(wt_aa)])
         return round(score, 4)
     except Exception as e:
+        print(f"计算出错: {e}")
         return -99.0
 
 @tool
