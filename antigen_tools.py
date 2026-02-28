@@ -1,20 +1,28 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 from smolagents import tool
+from typing import Any
 
-def load_esm_from_drive(drive_path):
+def load_esm_from_drive(drive_path: str):
     """从 Google Drive 本地路径加载模型"""
     print(f"📦 正在从云盘加载模型: {drive_path}")
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    # 使用 local_files_only=True 确保完全不走网络，只读云盘
     tokenizer = AutoTokenizer.from_pretrained(drive_path, local_files_only=True)
     model = AutoModelForMaskedLM.from_pretrained(drive_path, local_files_only=True).to(device)
     model.eval()
     return tokenizer, model, device
 
 @tool
-def predict_stability_score(sequence: str, mutation: str, tokenizer, model_esm, device) -> float:
-    """计算单点突变稳定性得分"""
+def predict_stability_score(sequence: str, mutation: str, tokenizer: Any, model_esm: Any, device: Any) -> float:
+    """
+    计算单点突变稳定性得分。
+    Args:
+        sequence: 蛋白质序列
+        mutation: 突变点 (如 'A15V')
+        tokenizer: 模型分词器
+        model_esm: ESM 模型实例
+        device: 计算设备 (cuda 或 cpu)
+    """
     try:
         wt_aa, mt_aa = mutation[0], mutation[-1]
         pos = int(mutation[1:-1]) - 1 
@@ -28,7 +36,11 @@ def predict_stability_score(sequence: str, mutation: str, tokenizer, model_esm, 
 
 @tool
 def get_hydrophobicity_info(mutation: str) -> dict:
-    """计算疏水性变化(ΔH)"""
+    """
+    计算突变的疏水性变化。
+    Args:
+        mutation: 突变点 (如 'A15V')
+    """
     kd_scale = {
         'I': 4.5, 'V': 4.2, 'L': 3.8, 'F': 2.8, 'C': 2.5, 'M': 1.9, 'A': 1.8,
         'G': -0.4, 'T': -0.7, 'S': -0.8, 'W': -0.9, 'Y': -1.3, 'P': -1.6,
